@@ -26,14 +26,7 @@ from models.policy import TanhGaussianPolicy
 # from models.bisimpolicy import TanhGaussianPolicy
 from models.bisimencoder import make_encoder
 
-"""
-policy buffer 1000000
-env step 2000000
-"""
 
-
-# bisim and env reconstruction have different reward function
-# bisim 仅仅优化 distshift model 而不优化context rnn
 class MetaLearner:
     """
     Meta-Learner class.
@@ -77,10 +70,10 @@ class MetaLearner:
         # calculate what the maximum length of the trajectories is, defualt is 2 episodes
         args.max_trajectory_len = (
             unwrapped_env._max_episode_steps
-        )  # 单个任务中每个episode的step
+        )  
         args.max_trajectory_len *= (
             self.args.max_rollouts_per_task
-        )  # rollout代表完整的一个episode，这里默认为2
+        )  
         self.args.max_trajectory_len = args.max_trajectory_len
 
         # get action / observation dimensions
@@ -104,7 +97,7 @@ class MetaLearner:
             max_replay_buffer_size=int(self.args.vae_buffer_size),
             obs_dim=utl.get_dim(self.env.observation_space),  # raw state
             action_space=self.env.action_space,
-            tasks=self.train_tasks,  # 用于抽取相同idx的任务
+            tasks=self.train_tasks,  
             trajectory_len=args.max_trajectory_len,
         )
 
@@ -113,7 +106,7 @@ class MetaLearner:
         # initialize buffer for RL updates
         self.policy_storage = MultiTaskPolicyStorage(
             max_replay_buffer_size=int(self.args.policy_buffer_size),
-            obs_dim=self._get_augmented_obs_dim(),  # augmented state    # TODO: 加入dist shift的维度
+            obs_dim=self._get_augmented_obs_dim(),  # augmented state   
             action_space=self.env.action_space,
             tasks=self.train_tasks,
             trajectory_len=args.max_trajectory_len,
@@ -179,18 +172,6 @@ class MetaLearner:
             # TODO: self.args.encoder_feature_dim
             encoder_feature_dim = 50
             augmented_obs_dim = self._get_augmented_obs_dim2()
-            # q1_network = FlattenMlp(input_size=encoder_feature_dim + self.args.action_dim,
-            #                         output_size=1,
-            #                         hidden_sizes=self.args.dqn_layers)
-            # q2_network = FlattenMlp(input_size=encoder_feature_dim + self.args.action_dim,
-            #                         output_size=1,
-            #                         hidden_sizes=self.args.dqn_layers)
-
-            # policy = TanhGaussianPolicy(obs_dim=self._get_augmented_obs_dim(),  # augmented state same as belief
-            #                             action_dim=self.args.action_dim,
-            #                             hidden_sizes=self.args.policy_layers,
-            #                             c_R=0.5,
-            #                             c_T=0.5)
 
             q1_network = FlattenMlp(
                 input_size=self._get_augmented_obs_dim2() + self.args.action_dim,
@@ -233,20 +214,7 @@ class MetaLearner:
                 alpha_lr=self.args.alpha_lr,
             ).to(ptu.device)
 
-            # self.agent = SAC(
-            #     policy,
-            #     q1_network,
-            #     q2_network,
 
-            #     actor_lr=self.args.actor_lr,
-            #     critic_lr=self.args.critic_lr,
-            #     gamma=self.args.gamma,
-            #     tau=self.args.soft_target_tau,
-
-            #     entropy_alpha=self.args.entropy_alpha,
-            #     automatic_entropy_tuning=self.args.automatic_entropy_tuning,
-            #     alpha_lr=self.args.alpha_lr
-            # ).to(ptu.device)
         else:
             raise NotImplementedError
 
@@ -254,10 +222,10 @@ class MetaLearner:
         """
         meta-training loop
         """
-        self._start_training()  # 初始化训练参数
+        self._start_training() 
         for iter_ in range(self.args.num_iters):  # 1000 iter
-            self.training_mode(True)  # 设为训练模式
-            # switch to belief reward  online 沒用
+            self.training_mode(True)  
+           
             if (
                 self.args.switch_to_belief_reward is not None
                 and iter_ >= self.args.switch_to_belief_reward
@@ -267,17 +235,15 @@ class MetaLearner:
                 print("Collecting initial pool of data..")
                 for task in self.train_tasks:
                     self.task_idx = task
-                    self.env.reset_task(idx=task)  # 初始化所有task
+                    self.env.reset_task(idx=task) 
                     # self.collect_rollouts(num_rollouts=self.args.num_init_rollouts_pool)
-
-                    # -------------------首先随机采样  num_init_rollouts_pool每个task rollout 5次-----------------
 
                     self.collect_rollouts(
                         num_rollouts=self.args.num_init_rollouts_pool,
                         random_actions=True,
                     )
                 print("Done!")
-                if self.args.pretrain_len > 0:  # 默认0,如果不为0 则初始化Vae
+                if self.args.pretrain_len > 0: 
                     print("Pre-training for {} updates.".format(self.args.pretrain_len))
                     for update in range(self.args.pretrain_len):
                         indices = np.random.choice(
@@ -285,7 +251,7 @@ class MetaLearner:
                         )
                         loss, _, _, _, _ = self.update_vae(
                             indices
-                        )  # ----------此处修改
+                        )  
                         if (update + 1) % int(self.args.pretrain_len / 10) == 0:
                             print(
                                 "Initial VAE training, {} updates. VAE loss: {:.3f}".format(
@@ -294,28 +260,26 @@ class MetaLearner:
                             )
                     self._n_vae_update_steps_total += (
                         self.args.vae_updates_per_iter
-                    )  # 每个iter vae更新20次
+                    )  
 
             # collect data from subset of train tasks， num-tasks-sample=5
             for i in range(self.args.num_tasks_sample):
                 task = self.train_tasks[
                     np.random.randint(len(self.train_tasks))
-                ]  # 随机抽取task
-                self.task_idx = task  # 在执行 collect_rollouts都会执行这一步
+                ] 
+                self.task_idx = task  
                 self.env.reset_task(idx=task)
                 # self.vae_storage.task_buffers[task].clear()  # whether to clear long horizon data
                 self.collect_rollouts(
                     num_rollouts=self.args.num_rollouts_per_iter
-                )  # 每个任务每个iter rollout5次
+                )  
 
-            # update vae and policy   从train task 中随机抽取8个任务
             indices = np.random.choice(
                 self.train_tasks, self.args.meta_batch
-            )  # meta_batch=8 or 16 , 梯度更新在8个任务中进行,每个update需要从traintask中随机选8个任务
-            """梯度更新会跨越多少个任务进行平均。这是元学习算法如模型无关元学习MAML中的一个典型参数，其中一个 meta-batch 包含了多
-            个不同的任务，梯度更新是基于这些任务的梯度的平均来进行的。"""
-            train_stats = self.update(indices, iter_)  # indices表示对应的任务
-            self.training_mode(False)  # 取消training mode
+            )  
+    
+            train_stats = self.update(indices, iter_) 
+            self.training_mode(False) 
 
             if self.args.policy == "dqn":
                 self.agent.set_exploration_parameter(iter_ + 1)
@@ -335,22 +299,20 @@ class MetaLearner:
         for update in range(
             self.args.rl_updates_per_iter
         ):  # rl_updates_per_iter==2000 use current vae
-            # sample random RL batch  需要返回task idx
+        
             obs, actions, rewards, next_obs, terms = self.sample_rl_batch(
                 tasks, self.args.batch_size
-            )  # 是根据task idx进行抽样的
+            )  
             # flatten out task dimension
-            t, b, _ = obs.size()  # t是任务数  b是batch大小
+            t, b, _ = obs.size()  
             origin_obs_shape = obs.shape
-            obs = obs.view(t * b, -1)  # 维度展开   task*batchsize
+            obs = obs.view(t * b, -1)  # task*batchsize
             actions = actions.view(t * b, -1)
             rewards = rewards.view(t * b, -1)
             next_obs = next_obs.view(t * b, -1)
             terms = terms.view(t * b, -1)
 
             # RL update  agent
-            """返回{'qf1_loss': qf1_loss.item(), 'qf2_loss': qf2_loss.item(),
-                'policy_loss': policy_loss.item(), 'alpha_entropy_loss': alpha_entropy_loss.item(),'sac_encoder_decoder_loss'}"""
             rl_losses = self.agent.update(
                 obs,
                 actions,
@@ -362,7 +324,7 @@ class MetaLearner:
                 b,
                 iter_,
                 self.vae_recon_loss,
-            )  # 使用SAC算法对policy更新
+            )  
 
             for k, v in rl_losses.items():
                 if update == 0:  # first iterate - create list
@@ -370,9 +332,9 @@ class MetaLearner:
                 else:  # append values
                     rl_losses_agg[k].append(v)  # shape{ " ":[] , "" : [] ,  }
         # take mean
-        for k in rl_losses_agg:  # 求2000次的均值
+        for k in rl_losses_agg:  
             rl_losses_agg[k] = np.mean(rl_losses_agg[k])
-        self._n_rl_update_steps_total += self.args.rl_updates_per_iter  # 记录rl的update
+        self._n_rl_update_steps_total += self.args.rl_updates_per_iter  
 
         # --- VAE TRAINING ---
         rew_losses, state_losses, task_losses, kl_terms, vae_losses = [], [], [], [], []
@@ -512,7 +474,6 @@ class MetaLearner:
                 running_reward = 0.0
                 for step_idx in range(num_steps_per_episode):
                     # add distribution parameters to observation - policy is conditioned on posterior
-                    # -------------------policy 接受belief        -----------------------
                     task_mean_cat_logvar = torch.cat((task_mean, task_logvar), dim=-1)
                     task_cat_shift = torch.cat(
                         (mu_shift, logvar_shift, rnn_output), dim=-1
@@ -530,7 +491,7 @@ class MetaLearner:
                         # augmented_encode_obs=self.agent.getobs_pass_to_sac(augmented_obs)
                         augmented_encode_obs = self.agent.getobs_notuse_cur_taskencoder(
                             augmented_obs
-                        )  # 获取当前step的gru_h
+                        ) 
                         action, _, _, log_prob = self.agent.act(
                             obs=augmented_encode_obs,
                             deterministic=self.args.eval_deterministic,
@@ -646,7 +607,6 @@ class MetaLearner:
         """
         Compute losses, update parameters and return the VAE losses
         """
-        # get a mini-batch of episodes  已知 tasks， 将不同task的(s,a,r,s')对应到rnnencoder的embedding中
         obs, actions, rewards, next_obs, terms = self.sample_vae_batch(
             tasks, self.args.vae_batch_num_rollouts_per_task
         )
@@ -676,7 +636,7 @@ class MetaLearner:
             )
 
         # pass through encoder (outputs will be: (max_traj_len+1) x number of rollouts x latent_dim -- includes the prior!)
-        # TODO: 改为taskencoder   ，并确定下面返回值的shape，尤其是task所在的维度
+
         _, latent_mean, latent_logvar, _, rnn_output = self.vae.encoder(
             actions=actions,
             states=next_obs,
@@ -706,7 +666,7 @@ class MetaLearner:
         # for each task we have in our batch   逐个task计算reconstruction loss
         for episode_idx in range(
             num_episodes
-        ):  # num_episodes=32  ,这里num_episodes就是task
+        ):  # num_episodes=32  
 
             # curr_means,curr_logvars,raw_curr_means,raw_curr_logvars,curr_mean_shift,curr_logvar_shift,curr_samples, dec_embedding, dec_embedding_mean_shift, \
             # dec_embedding_raw_sample,dec_rnn_output,dec_embedding_mean,dec_embedding_logvars, \
@@ -1252,13 +1212,8 @@ class MetaLearner:
                     task_mean_cat_logvar,
                     task_cat_shift,
                 ) = self.encode_running_episode()  # get running belief
-                # TODO:get prior dist shift  (shift function)  input:(s,a,s',r)  output:shift  从encode_running_episode获得(s,a,s',r)
+              
 
-            # if self.args.fixed_latent_params:
-            #     assert 2 ** self.args.task_embedding_size >= self.args.num_tasks
-            #     task_mean = ptu.FloatTensor(utl.vertices(self.args.task_embedding_size)[self.task_idx])
-            #     task_logvar = -2. * ptu.ones_like(task_logvar)   # arbitrary negative enough number
-            # add distribution parameters to observation - policy is conditioned on posterior
             augmented_obs = self.get_augmented_obs(
                 obs=obs, task_mu=task_mean_cat_logvar, task_std=task_cat_shift
             )
@@ -1293,7 +1248,7 @@ class MetaLearner:
                 )
                 done_rollout = (
                     False if ptu.get_numpy(done[0][0]) == 0.0 else True
-                )  # 判断一个episode是否结束
+                ) 
 
                 # belief reward - averaging over multiple latent embeddings - R+ = E[R(b)]
                 if self.args.belief_reward:
@@ -1309,7 +1264,7 @@ class MetaLearner:
                         ).view(-1, 1)
                         belief_reward = ptu.get_numpy(belief_reward.squeeze(dim=0))
 
-                # update encoding  通过VAE的encoder
+                # update encoding  
                 (
                     _,
                     task_mean,
@@ -1431,7 +1386,7 @@ class MetaLearner:
         task_mean_cat_logvar = torch.cat((task_mean, task_logvar), dim=-1)
         task_cat_shift = torch.cat(
             (mu_shift, logvar_shift, rnn_output), dim=-1
-        )  #####################  concat rnn output
+        )  
         if self.args.encoder_type == "rnn":
             hidden_state = all_hidden_states[length][0].detach().to(ptu.device)
         else:
@@ -1448,7 +1403,7 @@ class MetaLearner:
 
     def update_encoding(
         self, obs, action, reward, done, hidden_state
-    ):  # also should be used in bisimSAC   TODO: 计算dist shift 并加进去
+    ):  # also should be used in bisimSAC   
         # reset hidden state of the recurrent net when the task is done
         hidden_state = self.vae.encoder.reset_hidden(hidden_state, done)
         with torch.no_grad():  # size should be (batch, dim)
@@ -1529,7 +1484,7 @@ class MetaLearner:
 
     def sample_rl_batch(
         self, tasks, batch_size
-    ):  # 从policy buffer中随机采样    batch_size=256 transitions
+    ):  #    batch_size=256 transitions
         """sample batch of unordered rl training data from a list/array of tasks"""
         # this batch consists of transitions sampled randomly from replay buffer
         batches = [
@@ -1576,7 +1531,7 @@ class MetaLearner:
             # append to output batch
             batch.append(x)
 
-        return batch  # 包含了不同的task  [轨迹长度，总轨迹数，数据维度]
+        return batch 
 
     def _start_training(self):
         self._n_env_steps_total = 0

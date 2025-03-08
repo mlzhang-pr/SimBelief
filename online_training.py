@@ -5,14 +5,7 @@ import argparse
 
 from torchkit.pytorch_utils import set_gpu_mode
 
-# from metalearner import MetaLearner
-# from metalearner_raw1 import MetaLearner
-# from metalearner_datasample import MetaLearner
-# from metalearner_localrec import MetaLearner
-# from metalearner_local_bisim import MetaLearner
-# from metalearner_local_bisim_flip import MetaLearner
-# from metalearner_beliefbisim import MetaLearner
-# from metalearner_beliefbisim2 import MetaLearner
+
 from metalearner_sacvae import MetaLearner
 from online_config import (
     args_gridworld,

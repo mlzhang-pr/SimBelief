@@ -113,7 +113,7 @@ def get_args(rest_args):
     parser.add_argument('--vae-loss-coeff', type=float, default=1.0, help='weight for VAE loss (vs RL loss)')
     parser.add_argument('--kl-to-gauss-prior', type=boolean_argument, default=False)
     parser.add_argument('--learn-prior', type=boolean_argument, default=False)
-    parser.add_argument('--decode-only-past', type=boolean_argument, default=False,
+    parser.add_argument('--decode-only-past', type=boolean_argument, default=True,
                         help='whether to decode future observations')
     parser.add_argument('--condition-policy-on-state', type=boolean_argument, default=True,
                         help='after the encoder, add the env state to the latent space')
