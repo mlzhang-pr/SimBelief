@@ -25,11 +25,11 @@ python online_training.py --env-type env_name --seed seed_numer
 
 ## Citation
 
-@inproceedings{
-zhang2025learning,
-title={Learning Task Belief Similarity with Latent Dynamics for Meta-Reinforcement Learning},
-author={Menglong Zhang and Fuyuan Qian and Quanying Liu},
-booktitle={The Thirteenth International Conference on Learning Representations},
-year={2025},
-url={https://openreview.net/forum?id=5YbuOTUFQ4}
+@inproceedings{*<br />*
+zhang2025learning,*<br />*
+title={Learning Task Belief Similarity with Latent Dynamics for Meta-Reinforcement Learning},*<br />*
+author={Menglong Zhang and Fuyuan Qian and Quanying Liu},*<br />*
+booktitle={The Thirteenth International Conference on Learning Representations},*<br />*
+year={2025},*<br />*
+url={https://openreview.net/forum?id=5YbuOTUFQ4}*<br />*
 }
